@@ -4,10 +4,10 @@ using UnityEngine;
 public class CarController : MonoBehaviour
 {
     public  AudioSource Audio;  
-    public float motorTorque = 15000f;       // Power to move
-    public float brakeForce = 10000f;        // Braking power
+    public float motorTorque = 15000f;      
+    public float brakeForce = 10000f;        
     public float maxSteerAngle = 90f;
-    public float maxSteerspeed = 10;// Maximum steer angle
+    public float maxSteerspeed = 10;
 
     public WheelCollider frontLeftWheel;
     public WheelCollider frontRightWheel;
@@ -23,27 +23,56 @@ public class CarController : MonoBehaviour
     private float currentSteerAngle;
     private float currentSteerSpeed;
 
-    //public bool isEnemy = false;
+    private CarState currentCarState;
 
-    void FixedUpdate()
+    public enum CarState
     {
-        float verticalInput = Input.GetAxis("Vertical");   // W/S or Up/Down
-        float horizontalInput = Input.GetAxisRaw("Horizontal"); // A/D or Left/Right
+        idle,
+        inMovement,
+        breaked,
+        reverse
+    }
 
-        Debug.Log("Horizontal Input..." +horizontalInput);
+    
 
-        HandleMotor(verticalInput);
-        HandleSteering(horizontalInput);
-        UpdateWheels();
+    private void Awake()
+    {
+        currentCarState = CarState.idle;
+    }
+
+    void Update()
+    {
+        float verticalInput = Input.GetAxis("Vertical");   
+        float horizontalInput = Input.GetAxisRaw("Horizontal"); 
+
+        if(verticalInput != 0)
+        {
+            currentCarState = CarState.inMovement;
+        }
+        else if (verticalInput == 0)
+        {
+            currentCarState = CarState.idle;
+            currentBrakeForce = brakeForce;
+            ApplyBrake(currentBrakeForce);
+        }
+
+        Debug.Log("Horizontal Input..." + horizontalInput);
+
+        if (currentCarState == CarState.inMovement)
+        {   
+            HandleMotor(verticalInput);
+            HandleSteering(horizontalInput);
+            UpdateWheels();
+        }
     }
 
     private void HandleMotor(float verticalInput)
     {
-        // Apply torque to rear wheels
+       
         rearLeftWheel.motorTorque = verticalInput * motorTorque;
         rearRightWheel.motorTorque = verticalInput * motorTorque;
 
-        // Braking
+        
         if (Input.GetKey(KeyCode.Space))
         {
             currentBrakeForce = brakeForce;
@@ -61,7 +90,7 @@ public class CarController : MonoBehaviour
         horizontalInput = Mathf.Clamp(horizontalInput, -1, 1);
         currentSteerAngle = maxSteerAngle * horizontalInput;
         currentSteerAngle=maxSteerspeed * horizontalInput;
-       // Debug.Log("Current Steer Angle....." + currentSteerAngle);
+      
         frontLeftWheel.steerAngle = currentSteerAngle;
         frontRightWheel.steerAngle = currentSteerAngle;
     }
@@ -76,10 +105,13 @@ public class CarController : MonoBehaviour
 
     private void UpdateWheels()
     {
-        UpdateWheelPose(frontLeftWheel, frontLeftTransform);
-        UpdateWheelPose(frontRightWheel, frontRightTransform);
-        UpdateWheelPose(rearLeftWheel, rearLeftTransform);
-        UpdateWheelPose(rearRightWheel, rearRightTransform);
+       if(currentCarState == CarState.inMovement)
+        {
+            UpdateWheelPose(frontLeftWheel, frontLeftTransform);
+            UpdateWheelPose(frontRightWheel, frontRightTransform);
+            UpdateWheelPose(rearLeftWheel, rearLeftTransform);
+            UpdateWheelPose(rearRightWheel, rearRightTransform);
+        }
     }
 
     private void UpdateWheelPose(WheelCollider col, Transform trans)
